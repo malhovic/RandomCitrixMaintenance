@@ -24,25 +24,51 @@ Scripts in this repository may make changes to Citrix infrastructure. Always rev
 
 ---
 
-## Recommended Workflow
+## Recommended Workflows
 
 For Citrix Delivery Controller database migrations, use the scripts in this order:
 
-1. Run `Test-CitrixDBMigrationReadiness.ps1`
-2. Review the console output and CSV report
-3. Resolve any failures or unacceptable warnings
-4. Run `Update-CitrixDBConnections.ps1` during a maintenance window
-5. Restart Citrix services or reboot the Delivery Controller
-6. Validate Studio, Director, VDAs, Machine Catalogs, Delivery Groups, and application/desktop launches
+1. Run `Get-CitrixSiteInventory.ps1`
+2. Run `Backup-CitrixSiteConfiguration.ps1`
+3. Run `Test-CitrixControllerHealth.ps1`
+4. Run `Test-CitrixDBMigrationReadiness.ps1`
+5. Review console output and CSV reports
+6. Resolve any failures or unacceptable warnings
+7. Run `Update-CitrixDBConnections.ps1` during a maintenance window
+8. Restart Citrix services or reboot the Delivery Controller
+9. Run `Test-CitrixPostMigrationValidation.ps1`
+10. Run `Test-CitrixVDARegistrationHealth.ps1`
+11. Validate Studio, Director, VDAs, Machine Catalogs, Delivery Groups, and application/desktop launches
+
+For general Citrix upgrade readiness, use:
+
+1. Run `Get-CitrixSiteInventory.ps1`
+2. Run `Backup-CitrixSiteConfiguration.ps1`
+3. Run `Test-CitrixControllerHealth.ps1`
+4. Run `Test-CitrixUpgradeReadiness.ps1`
+5. Run `Test-CitrixHostingConnectionHealth.ps1`
+6. Run `Invoke-CitrixRebootScheduleAudit.ps1`
+7. Run `Get-CitrixFailedSessionsReport.ps1` before and after the change window
+8. Use `Set-CitrixControllerMaintenanceMode.ps1 -WhatIf` to preview maintenance-mode changes before applying them
 
 ---
 
 ## Scripts
 
-| Script                                | Purpose                                                                                   | Impact                   | Recommended Order |
-| ------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------ | ----------------- |
-| `Test-CitrixDBMigrationReadiness.ps1` | Validates whether the current session/user appears ready to perform a Citrix DB migration | Read-only / non-changing | 1                 |
-| `Update-CitrixDBConnections.ps1`      | Migrates a Delivery Controller to new Citrix database connection strings                  | Makes changes            | 2                 |
+| Script | Purpose | Impact |
+| --- | --- | --- |
+| `Get-CitrixSiteInventory.ps1` | Exports Controllers, zones, catalogs, delivery groups, machines, applications, hosting connections, reboot schedules, and DB connections | Read-only |
+| `Backup-CitrixSiteConfiguration.ps1` | Creates CSV and CLIXML snapshots of common site configuration before major changes | Read-only |
+| `Test-CitrixControllerHealth.ps1` | Checks controller health, Citrix services, SDK access, DB connection visibility, and recent Citrix event log errors | Read-only |
+| `Test-CitrixUpgradeReadiness.ps1` | Performs broad pre-upgrade checks such as OS, disk space, pending reboot, controller/site access, DB visibility, and VDA registration health | Read-only |
+| `Test-CitrixDBMigrationReadiness.ps1` | Validates whether the current session/user appears ready to perform a Citrix DB migration | Read-only |
+| `Update-CitrixDBConnections.ps1` | Migrates a Delivery Controller to new Citrix database connection strings | Makes changes |
+| `Test-CitrixPostMigrationValidation.ps1` | Validates expected DB connection strings and basic site functionality after a DB migration | Read-only |
+| `Set-CitrixControllerMaintenanceMode.ps1` | Enables or disables maintenance mode for target machines with `-WhatIf` / `-Confirm` support | Makes changes |
+| `Test-CitrixVDARegistrationHealth.ps1` | Exports VDA registration, power, maintenance mode, and last deregistration details | Read-only |
+| `Invoke-CitrixRebootScheduleAudit.ps1` | Exports reboot schedules and machine reboot-state indicators | Read-only |
+| `Test-CitrixHostingConnectionHealth.ps1` | Exports hosting/hypervisor connection and provisioning scheme health indicators | Read-only |
+| `Get-CitrixFailedSessionsReport.ps1` | Exports recent failed or suspicious connection/session records for before/after comparisons | Read-only |
 
 ---
 
