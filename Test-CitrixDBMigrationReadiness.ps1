@@ -81,6 +81,7 @@ $Services = @(
 )
 
 $Results = New-Object System.Collections.Generic.List[object]
+$UnavailableTestCommands = New-Object System.Collections.Generic.HashSet[string]
 
 # -------------------------------------------------------------------------
 # Helper Functions
@@ -225,7 +226,7 @@ else {
 
 try {
     $outputDir = Split-Path -Path $OutputPath -Parent
-    if (!(Test-Path $outputDir)) {
+    if (![string]::IsNullOrWhiteSpace($outputDir) -and !(Test-Path $outputDir)) {
         New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
     }
 
@@ -358,6 +359,7 @@ foreach ($service in $Services) {
         Add-Result -Category "Citrix Commands" -Check "$testCommandName available" -Status "PASS" -Details "Command found."
     }
     catch {
+        [void]$UnavailableTestCommands.Add($testCommandName)
         Add-Result -Category "Citrix Commands" -Check "$testCommandName available" -Status "WARN" -Details "Command not found. This service may not expose a Test-*DBConnection cmdlet in this SDK/version."
     }
 
@@ -400,6 +402,15 @@ Write-Host ""
 foreach ($service in $Services) {
     $testCommandName = "Test-$($service)DBConnection"
     $targetConnectionString = Get-ConnectionStringForService -Service $service
+
+    if ($UnavailableTestCommands.Contains($testCommandName)) {
+        Add-Result `
+            -Category "Citrix DB Preflight" `
+            -Check "$service proposed DB connection" `
+            -Status "WARN" `
+            -Details "$testCommandName is unavailable in this SDK/version; skipping Citrix DB connection test for this service."
+        continue
+    }
 
     if ([string]::IsNullOrWhiteSpace($targetConnectionString)) {
         Add-Result `
@@ -471,13 +482,13 @@ else {
 # -------------------------------------------------------------------------
 
 try {
-    $Results | Export-Csv -Path $OutputPath -NoTypeInformation -Force
-
     Add-Result `
         -Category "Output" `
         -Check "CSV report" `
         -Status "PASS" `
         -Details "Report written to $OutputPath"
+
+    $Results | Export-Csv -Path $OutputPath -NoTypeInformation -Force
 }
 catch {
     Add-Result `

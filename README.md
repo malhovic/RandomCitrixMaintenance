@@ -217,7 +217,7 @@ This script is useful when migrating Citrix databases to a new SQL Server, resto
 
 ## What This Script Does
 
-The script performs the database connection update in three major phases.
+The script performs the database connection update in four major phases.
 
 ---
 
@@ -242,7 +242,23 @@ It does this by comparing the Broker, Logging, and Monitoring database connectio
 
 ---
 
-## Phase 2: Nullify Existing Connection Strings
+## Phase 2: Collect New Connection Strings
+
+The script collects the new database connection string or strings before any Citrix configuration is changed.
+
+For a **single database configuration**, the script uses one connection string and applies it to all supported services.
+
+For a **split database configuration**, the script uses:
+
+* Site database connection string
+* Logging database connection string
+* Monitoring database connection string
+
+Connection strings can be provided as parameters or entered interactively when prompted. If any required connection string is blank, the script exits before changing existing database connections.
+
+---
+
+## Phase 3: Nullify Existing Connection Strings
 
 The script loops through the standard Citrix FMA services and sets each database connection to `$null`.
 
@@ -252,19 +268,9 @@ The script pauses before this phase and displays a warning so the administrator 
 
 ---
 
-## Phase 3: Apply New Connection Strings
+## Phase 4: Apply New Connection Strings
 
-After the existing connection strings are nullified, the script prompts the administrator for the new database connection string or strings.
-
-For a **single database configuration**, the script prompts for one connection string and applies it to all supported services.
-
-For a **split database configuration**, the script prompts for:
-
-* Site database connection string
-* Logging database connection string
-* Monitoring database connection string
-
-It then applies the appropriate connection string to each Citrix FMA service.
+After the existing connection strings are nullified, the script applies the appropriate new connection string to each Citrix FMA service.
 
 After updating the services, the script verifies the new connection strings by querying each service again.
 
@@ -344,13 +350,31 @@ Run the script from an elevated PowerShell session on a Citrix Delivery Controll
 
 Follow the prompts carefully.
 
+You can also provide connection strings as parameters:
+
+```powershell
+.\Update-CitrixDBConnections.ps1 `
+    -SingleDatabase `
+    -SiteDBConnection "Server=NEW-SQL-SERVER;Initial Catalog=CitrixSiteDB;Integrated Security=True"
+```
+
+For split database deployments:
+
+```powershell
+.\Update-CitrixDBConnections.ps1 `
+    -SplitDatabase `
+    -SiteDBConnection "Server=NEW-SQL-SERVER;Initial Catalog=CitrixSiteDB;Integrated Security=True" `
+    -LoggingDBConnection "Server=NEW-SQL-SERVER;Initial Catalog=CitrixLoggingDB;Integrated Security=True" `
+    -MonitoringDBConnection "Server=NEW-SQL-SERVER;Initial Catalog=CitrixMonitoringDB;Integrated Security=True"
+```
+
 The script will:
 
 1. Capture the current DB connection strings.
 2. Save them to `C:\temp\CurrentCitrixDBConnections.txt`.
 3. Detect whether the environment uses single or split databases.
-4. Pause before nullifying the current database connections.
-5. Prompt for the new connection string or strings.
+4. Collect and validate the required new connection string or strings.
+5. Pause before nullifying the current database connections.
 6. Apply the new connection strings.
 7. Display the resulting configuration for verification.
 
